@@ -1,0 +1,122 @@
+# Web security with OWASP Security Shepherd, a training platform of web security challenges,
+# with its own databases.
+#
+# Your copy is the only thing you may attack, and it is the only thing you can reach: this
+# lab has no way out to the internet. Never point a tool at a site you do not own, in a lab
+# or anywhere else.
+#
+# Press Open on the lab's page and sign in as student with the password password. The
+# databases are made for you, so there is nothing to set up. Shepherd is a game: press Get
+# Next Challenge for a lesson and then a challenge, and each challenge hides a result key
+# that you type into the box at the top to score. The administrator is admin with the same
+# password, for seeing the players and the Score Board.
+#
+# Hand in a screenshot of each challenge solved and, for each, a paragraph on what the page
+# trusted that it should not have, and the one change that would have stopped you.
+#
+# Nothing is saved: stopping the lab and starting it again is a fresh Shepherd with the
+# first challenge unsolved.
+
+services:
+  # The schemas ship inside the application's own archive and there is no database image
+  # that carries them, so this opens the archive once and puts them where each database
+  # reads its first-start scripts. The web server image is the one image that has them, and
+  # a job that exits is what the databases wait for.
+  prepare:
+    image: owasp/security-shepherd@sha256:bf2642893c733cbbc1aeeb0e828cdc705d5ce15205549a6a08fc557038c640ef
+    user: "0"
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        cd /tmp
+        unzip -q /usr/local/tomcat/webapps/ROOT.war "WEB-INF/classes/database/*" "WEB-INF/classes/mongodb/*"
+        sed -e 's/^-- DELIMITER/DELIMITER/' -e 's/^ *-- \$$\$$/$$$$/' WEB-INF/classes/database/coreSchema.sql > /sql/1-core.sql
+        sed -e 's/^-- DELIMITER/DELIMITER/' -e 's/^ *-- \$$\$$/$$$$/' -e "s/@'localhost'/@'%'/g" WEB-INF/classes/database/moduleSchemas.sql > /sql/2-modules.sql
+        sed "s|//REMOVE||" WEB-INF/classes/mongodb/moduleSchemas.js > /js/schemas.js
+        # A player to sign in as: the same password as the administrator, found in the schema
+        # rather than typed here, so the hash is the application's own.
+        sed -nE "s/^call userCreate\(null, 'admin', ('[^']*'), 'admin', null, 'admin@securityShepherd.org', 'login', true, false\);/call userCreate(null, 'student', \1, 'player', null, 'student@securityShepherd.org', 'login', false, false);/p" WEB-INF/classes/database/coreSchema.sql | sed "1s/^/USE core; /" > /sql/3-student.sql
+    volumes:
+      - sql:/sql
+      - js:/js
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  db:
+    image: mariadb:10.6.22
+    environment:
+      # Nothing outside this copy can reach the database, so this is written down.
+      MARIADB_ROOT_PASSWORD: CowSaysMoo
+    volumes:
+      - sql:/docker-entrypoint-initdb.d
+    depends_on:
+      prepare:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  mongo:
+    image: mongo:4.4.29
+    volumes:
+      - js:/docker-entrypoint-initdb.d
+    depends_on:
+      prepare:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "mongo --quiet --eval 'db.getSiblingDB(\"shepherdGames\").gamer.count()' | grep -q 6"]
+      interval: 3s
+      timeout: 10s
+      retries: 60
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  web:
+    image: owasp/security-shepherd@sha256:bf2642893c733cbbc1aeeb0e828cdc705d5ce15205549a6a08fc557038c640ef
+    user: "101"
+    # The image ships with its two connection files empty, to be filled when the image is
+    # built. They are filled here instead, at start, so that nothing has to be built. It also
+    # insists on https, and a lab is reached through the platform's own address, so the one
+    # setting that redirects to a port nothing publishes is turned off.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        printf 'databaseConnectionURL=jdbc:mysql://db:3306/\nDriverType=com.mysql.jdbc.Driver\ndatabaseSchema=core\ndatabaseUsername=root\ndatabasePassword=CowSaysMoo\ndatabaseOptions=useUnicode=true&character_set_server=utf8mb4\n' > /usr/local/tomcat/conf/database.properties
+        printf 'connectionHost=mongo\nconnectionPort=27017\ndatabaseName=shepherdGames\nconnectTimeout=1000\nsocketTimeout=0\nserverSelectionTimeout=30000\n' > /usr/local/tomcat/conf/mongo.properties
+        sed -i 's|<transport-guarantee>CONFIDENTIAL|<transport-guarantee>NONE|' /usr/local/tomcat/conf/web.xml
+        exec catalina.sh run
+    expose: ["8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://127.0.0.1:8080/login.jsp"]
+      interval: 5s
+      timeout: 5s
+      retries: 80
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    labels:
+      lab.title: Security Shepherd
+      lab.open: "8080"
+
+volumes:
+  sql:
+  js:
