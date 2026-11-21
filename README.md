@@ -101,3 +101,7 @@ The compose file, the tests and this documentation are MIT licensed, see [LICENS
 Made by [Mitsuru Technologies](https://mitsurutech.co.uk) for the [MitsuruTech Learning Platform](https://mitsurutech.co.uk/learning): Python, Java, Go, Node, SQL and Linux in the browser for schools and colleges, with container labs, web apps deployed from GitHub, and quizzes that mark themselves. Try code with no account in the [playground](https://mitsurutech.co.uk/playground). The lab has its own page in the help manual, [Security Shepherd lab](https://mitsurutech.co.uk/help/lab-security-shepherd), and the others are listed in [Labs and samples](https://mitsurutech.co.uk/help/labs).
 
 More labs from the same place: [lab-juice-shop](https://github.com/mitsurutech/lab-juice-shop), [lab-dvwa](https://github.com/mitsurutech/lab-dvwa), [lab-webgoat](https://github.com/mitsurutech/lab-webgoat), [lab-mysql-phpmyadmin](https://github.com/mitsurutech/lab-mysql-phpmyadmin), [lab-git-gitea](https://github.com/mitsurutech/lab-git-gitea) and [lab-sample](https://github.com/mitsurutech/lab-sample).
+
+## About the passwords in this repository
+
+The database password in `compose.yaml` (`CowSaysMoo`) is OWASP Security Shepherd's own published default. It is a fixture for a lab that runs only on your own computer or inside the platform, never a real credential, and it is written here on purpose.
