@@ -1,5 +1,7 @@
 # OWASP Security Shepherd lab with Docker Compose: practise web security challenges, one lesson at a time
 
+[English](README.md) | [Français](README.fr.md) | [Español](README.es.md) | [日本語](README.ja.md) | [Deutsch](README.de.md)
+
 [![check](https://github.com/mitsurutech/lab-security-shepherd/actions/workflows/check.yml/badge.svg)](https://github.com/mitsurutech/lab-security-shepherd/actions/workflows/check.yml)
 
 A ready-made **web security training lab** for classrooms, from the [MitsuruTech Learning Platform](https://mitsurutech.co.uk/learning), where schools and colleges give every student their own databases, containers and terminal in the browser. Each student gets their own copy of **OWASP Security Shepherd**, the security training game with its lessons and challenges, with its **MariaDB and MongoDB databases already made**, to practise **SQL injection, cross-site scripting, broken authentication, insecure direct object references** and more, scoring a result key for each challenge solved. They explain the flaw, and hand in evidence, with nothing installed and no risk to anybody else's machine.
